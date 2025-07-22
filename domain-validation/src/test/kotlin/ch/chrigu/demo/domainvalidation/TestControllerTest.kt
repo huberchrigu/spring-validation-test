@@ -17,8 +17,23 @@ class TestControllerTest(private val webTestClient: WebTestClient) {
         """'{}', The required property name is missing""",
         """'{"name": "Test", "age": 18}', """
     )
-    fun test(json: String, exception: String?) {
-        val result = webTestClient.post().uri("/")
+    fun testCustomResolver(json: String, exception: String?) {
+        executeTest(json, exception, "/")
+    }
+
+    @ParameterizedTest
+    @CsvSource(
+        """'{name: "abc"}', Invalid JSON: Unexpected character ('n' (code 110)): was expecting double-quote to start field name""",
+        """'{"name": "Test", "age": 0}', Invalid domain object: Age must be 18 or greater""",
+        """'{}', The required property name is missing""",
+        """'{"name": "Test", "age": 18}', """
+    )
+    fun testStandardBehavior(json: String, exception: String?) {
+        executeTest(json, exception, "/standard")
+    }
+
+    private fun executeTest(json: String, exception: String?, uri: String) {
+        val result = webTestClient.post().uri(uri)
             .contentType(MediaType.APPLICATION_JSON)
             .bodyValue(json)
             .exchange()

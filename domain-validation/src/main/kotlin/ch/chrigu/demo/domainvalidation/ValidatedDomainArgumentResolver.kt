@@ -1,9 +1,6 @@
 package ch.chrigu.demo.domainvalidation
 
-import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.exc.ValueInstantiationException
-import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
 import org.springframework.core.MethodParameter
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.web.reactive.BindingContext
@@ -25,15 +22,6 @@ class ValidatedDomainArgumentResolver(private val objectMapper: ObjectMapper) : 
     ): Mono<Any> {
         return DataBufferUtils.join(exchange.request.body)
             .map { objectMapper.readValue(it.toString(Charset.defaultCharset()), parameter.parameterType) }
-            .onErrorMap { toInvalidDomainException(it) }
-    }
-
-    private fun toInvalidDomainException(t: Throwable) = when (t) {
-        is MissingKotlinParameterException -> InvalidDomainException("The required property ${t.parameter.name} is missing", t)
-        is ValueInstantiationException if t.cause is IllegalArgumentException -> InvalidDomainException("Invalid domain object: " + t.cause?.message, t)
-        is JsonParseException -> InvalidDomainException("Invalid JSON: " + t.originalMessage, t)
-        else -> t
+            .onErrorMap { it.asInvalidDomainException() }
     }
 }
-
-class InvalidDomainException(message: String?, cause: Throwable) : RuntimeException(message, cause)
